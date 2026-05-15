@@ -72,7 +72,7 @@ On WSL, the output is automatically copied to your Windows filesystem and the fo
 You can also pass a full path to any executable with `--ide`
 
 
-## MCP server — AI inspection mode
+## MCP server (if you dont want to use an AI extension in your IDE)
  
 `crxreader_mcp.py` exposes the same pipeline as an MCP server so an AI model can download, unpack, and read Chrome extensions
  
