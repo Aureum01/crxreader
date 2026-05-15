@@ -70,3 +70,102 @@ On WSL, the output is automatically copied to your Windows filesystem and the fo
 `code`, `code-insiders`, `cursor`, `idea`, `pycharm`, `webstorm`, `subl`, `zed`
 
 You can also pass a full path to any executable with `--ide`
+
+
+## MCP server — AI inspection mode
+ 
+`crxreader_mcp.py` exposes the same pipeline as an MCP server so an AI model can download, unpack, and read Chrome extensions
+ 
+### install
+ 
+```bash
+pip install mcp requests
+```
+ 
+### tools
+ 
+| tool | what it does |
+|---|---|
+| `download_extension` | downloads and unpacks an extension by URL or ID |
+| `list_files` | lists all files in the unpacked folder |
+| `read_file` | reads a specific file |
+| `search_files` | searches across all source files for a pattern or regex |
+ 
+ 
+### option 1 — Ollama via ollmcp (works on Windows WSL)
+ 
+This is the recommended path on Windows. It connects your local Ollama models directly to the MCP tools via a terminal UI.
+ 
+**Install ollmcp:**
+ 
+```bash
+pip install mcp-client-for-ollama
+```
+ 
+**Create the server config:**
+ 
+```bash
+mkdir -p ~/.config/ollmcp
+cat > ~/.config/ollmcp/mcp_servers.json << 'EOF'
+{
+  "mcpServers": {
+    "crxreader": {
+      "command": "/path/to/venv/bin/python",
+      "args": ["/path/to/crxreader_mcp.py"]
+    }
+  }
+}
+EOF
+```
+ 
+**Run:**
+ 
+```bash
+ollmcp --host http://$(ip route | grep default | awk '{print $3}'):11434 \
+       --servers-json ~/.config/ollmcp/mcp_servers.json \
+       --model qwen3:8b
+```
+ 
+Then just ask it:
+ 
+```
+inspect this extension: https://chromewebstore.google.com/detail/vortimo-osint-tool/mnakbpdnkedaegeiaoakkjafhoidklnf
+```
+ 
+The model will call `download_extension` automatically, return a manifest summary, then let you ask follow-up questions like `search for fetch calls` or `read background.bundle.js`.
+ 
+**Note on Windows:** Claude Desktop on Windows has a known MSIX packaging bug that silently ignores local MCP server config. Use Ollama + ollmcp via WSL until Anthropic ships a fix.
+ 
+ 
+### option 2 — Claude Desktop (macOS and Linux only)
+ 
+Add this to your Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `~/.config/Claude/claude_desktop_config.json` (Linux):
+ 
+```json
+{
+  "mcpServers": {
+    "crxreader": {
+      "command": "/path/to/venv/bin/python",
+      "args": ["/path/to/crxreader_mcp.py"]
+    }
+  }
+}
+```
+ 
+Restart Claude Desktop. A hammer icon will appear in the chat input confirming the tools are connected. Then say:
+ 
+```
+inspect this extension: https://chromewebstore.google.com/detail/...
+```
+ 
+ 
+### option 3 — SSE mode (any SSE-compatible MCP client)
+ 
+Run the server in SSE mode:
+ 
+```bash
+python crxreader_mcp.py --transport sse --port 8000
+```
+ 
+Then point your client at `http://localhost:8000/sse`.
+
